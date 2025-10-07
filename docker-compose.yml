@@ -1,14 +1,54 @@
 services:
   stats-server:
+    build: stats/stats-service
+    image: stats-service
+    container_name: stats-service
     ports:
       - "9090:9090"
-
+    depends_on:
+      - stats-db
+    environment:
+      - spring.datasource.url=jdbc:postgresql://stats-db:5432/explore-with-me-stats
+      - spring.datasource.username=postgres
+      - spring.datasource.password=12345
+      - stat-client.name=ewm-main-service
+      - stats-server.uri=http://stats-server:9090
   stats-db:
     image: postgres:16.1
+    container_name: statistic_database
+    volumes:
+      - /var/lib/postgresql/data/
+    ports:
+      - "6541:5432"
+    environment:
+      - POSTGRES_DB=explore-with-me-stats
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
 
   ewm-service:
+    build: ewm-service
+    image: ewm-service
+    container_name: ewm-service
     ports:
       - "8080:8080"
+    depends_on:
+      - stats-server
+      - ewm-db
+    environment:
+      - spring.datasource.url=jdbc:postgresql://ewm-db:5432/explore-with-me-ewm
+      - spring.datasource.username=postgres
+      - spring.datasource.password=12345
+      - stat-client.name=ewm-main-service
+      - stats-server.uri=http://stats-server:9090
 
   ewm-db:
     image: postgres:16.1
+    container_name: ewm_database
+    volumes:
+      - /var/lib/postgresql/data/
+    ports:
+      - "6542:5432"
+    environment:
+      - POSTGRES_DB=explore-with-me-ewm
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345
