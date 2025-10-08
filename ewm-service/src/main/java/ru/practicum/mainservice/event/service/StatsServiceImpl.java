@@ -34,7 +34,6 @@ public class StatsServiceImpl implements StatsService {
     @Override
     public void addHit(HttpServletRequest request) {
         log.info("Отправлен запрос на регистрацию запроса на сервер статистики с параметрами запроса = {}", request);
-
         statsClient.addHit(appName, request.getRequestURI(), request.getRemoteAddr(),
                 LocalDateTime.parse(LocalDateTime.now().format(MainCommonUtils.DT_FORMATTER), MainCommonUtils.DT_FORMATTER));
     }
@@ -43,9 +42,7 @@ public class StatsServiceImpl implements StatsService {
     public List<ViewStats> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
         log.info("Отправил запрос на получение статистики на сервер статистики с параметрами " +
                 "start = {}, end = {}, uris = {}, unique = {}", start, end, uris, unique);
-
         ResponseEntity<Object> response = statsClient.getStats(start, end, uris, unique);
-
         try {
             return Arrays.asList(mapper.readValue(mapper.writeValueAsString(response.getBody()), ViewStats[].class));
         } catch (IOException exception) {
@@ -55,22 +52,17 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public Map<Long, Long> getViews(Set<Event> events) {
-        log.info("Был отправлен запрос на получение статистики неуникальных посещений в виде Map<eventId, count> " +
+        log.info("Был отправлен запрос на получение статистики УНИКАЛЬНЫХ посещений в виде Map<eventId, count> " +
                 "для списка событий. ");
-
         Map<Long, Long> views = new HashMap<>();
-
         Set<Event> publishedEvents = getPublished(events);
-
         if (events.isEmpty()) {
             return views;
         }
-
         Optional<LocalDateTime> minPublishedOn = publishedEvents.stream()
                 .map(Event::getPublishedOn)
                 .filter(Objects::nonNull)
                 .min(LocalDateTime::compareTo);
-
         if (minPublishedOn.isPresent()) {
             LocalDateTime start = minPublishedOn.get();
             LocalDateTime end = LocalDateTime.now();
@@ -79,14 +71,14 @@ public class StatsServiceImpl implements StatsService {
                     .map(id -> ("/events/" + id))
                     .collect(Collectors.toList());
 
-            List<ViewStats> stats = getStats(start, end, uris, null);
+            List<ViewStats> stats = getStats(start, end, uris, true); // <--- ВОТ ИСПРАВЛЕНИЕ
+
             stats.forEach(stat -> {
                 Long eventId = Long.parseLong(stat.getUri()
                         .split("/", 0)[2]);
                 views.put(eventId, views.getOrDefault(eventId, 0L) + stat.getHits());
             });
         }
-
         return views;
     }
 
@@ -95,14 +87,11 @@ public class StatsServiceImpl implements StatsService {
         List<Long> eventsId = getPublished(events).stream()
                 .map(Event::getId)
                 .collect(Collectors.toList());
-
         Map<Long, Long> requestStats = new HashMap<>();
-
         if (!eventsId.isEmpty()) {
             requestRepository.getConfirmedRequests(eventsId)
                     .forEach(stat -> requestStats.put(stat.getEventId(), stat.getConfirmedRequests()));
         }
-
         return requestStats;
     }
 

@@ -20,7 +20,11 @@ import ru.practicum.mainservice.user.model.User;
 import ru.practicum.mainservice.user.service.UserService;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,7 +97,7 @@ public class RequestServiceImpl implements RequestService {
         userService.getUserById(userId);
 
         Request request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new NotFoundException("Заявка на участие с таким ID не подается."));
+                .orElseThrow(() -> new NotFoundException("Заявка на участие с ID " + requestId + " не найдена."));
 
         checkUserIsOwner(request.getRequester().getId(), userId);
 

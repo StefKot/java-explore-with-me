@@ -27,8 +27,9 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDto create(NewUserRequest newUserRequest) {
         log.info("Добавление пользователя {}", newUserRequest);
-
-        return userMapper.toUserDto(userRepository.save(userMapper.toUser(newUserRequest)));
+        User user = userMapper.toUser(newUserRequest);
+        User savedUser = userRepository.save(user);
+        return userMapper.toUserDto(savedUser);
     }
 
     @Override
@@ -50,18 +51,18 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deleteById(Long id) {
         log.info("Удаление пользователя с ID {}", id);
-
-        userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Пользователь с ID не существует"));
-
+        findUserById(id);
         userRepository.deleteById(id);
     }
 
     @Override
     public User getUserById(Long id) {
         log.info("Вывод пользователя с ID {}", id);
+        return findUserById(id);
+    }
 
+    private User findUserById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Пользователь с ID не существует"));
+                .orElseThrow(() -> new NotFoundException("Пользователь с ID " + id + " не найден"));
     }
 }
