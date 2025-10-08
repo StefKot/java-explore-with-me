@@ -12,7 +12,7 @@ services:
       - spring.datasource.username=postgres
       - spring.datasource.password=12345
       - stat-client.name=ewm-main-service
-      - stats-server.uri=http://stats-server:9090
+      - stats-server.url=http://stats-server:9090
   stats-db:
     image: postgres:16.1
     container_name: statistic_database
@@ -39,7 +39,7 @@ services:
       - spring.datasource.username=postgres
       - spring.datasource.password=12345
       - stat-client.name=ewm-main-service
-      - stats-server.uri=http://stats-server:9090
+      - stats-server.url=http://stats-server:9090
 
   ewm-db:
     image: postgres:16.1
