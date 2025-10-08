@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.mainservice.category.model.Category;
 import ru.practicum.mainservice.category.service.CategoryService;
+import ru.practicum.mainservice.comment.repository.CommentRepository;
 import ru.practicum.mainservice.event.dto.EventFullDto;
 import ru.practicum.mainservice.event.dto.EventShortDto;
 import ru.practicum.mainservice.event.dto.LocationDto;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 public class EventServiceImpl implements EventService {
     private final UserService userService;
     private final CategoryService categoryService;
+    private final CommentRepository commentRepository;
     private final StatsService statsService;
     private final LocationRepository locationRepository;
     private final EventRepository eventRepository;
@@ -61,7 +63,7 @@ public class EventServiceImpl implements EventService {
     public EventFullDto patchEventByAdmin(Long eventId, UpdateEventAdminRequest updateEventAdminRequest) {
         log.info("Обновление события с ID {} по запросу администратора с параметрами {}", eventId, updateEventAdminRequest);
         checkNewEventDate(updateEventAdminRequest.getEventDate(), LocalDateTime.now().plusHours(1));
-        Event event = getEventById(eventId);
+        Event event = getPublicEventById(eventId);
         if (updateEventAdminRequest.getAnnotation() != null && !updateEventAdminRequest.getAnnotation().isBlank()) {
             event.setAnnotation(updateEventAdminRequest.getAnnotation());
         }
@@ -222,7 +224,7 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventFullDto getEventByPublic(Long eventId, HttpServletRequest request) {
         log.info("Вывод события с ID {} в публичный запрос", eventId);
-        Event event = getEventById(eventId);
+        Event event = getPublicEventById(eventId);
         if (!event.getState().equals(EventState.PUBLISHED)) {
             throw new NotFoundException("Событие с этим ID не было опубликовано");
         }
@@ -231,16 +233,15 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public Event getEventById(Long eventId) {
+    public Event getPublicEventById(Long eventId) {
         log.info("Вывод события с ID {}", eventId);
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException("Событие с ID " + eventId + " не найдено"));
+        return findEventById(eventId);
     }
 
     @Override
     public Set<Event> getEventsByIds(List<Long> eventsId) {
         log.info("Вывести список событий с IDs {}", eventsId);
-        if (eventsId == null || eventsId.isEmpty()) {
+        if (eventsId.isEmpty()) {
             return new HashSet<>();
         }
         return eventRepository.findAllByIdIn(eventsId);
@@ -254,11 +255,13 @@ public class EventServiceImpl implements EventService {
         }
         Map<Long, Long> confirmedRequests = statsService.getConfirmedRequests(events);
         Map<Long, Long> views = statsService.getViews(events);
+        Map<Long, Long> comments = getCommentsCount(events);
         return events.stream()
                 .map((event) -> eventMapper.toEventShortDto(
                         event,
                         confirmedRequests.getOrDefault(event.getId(), 0L),
-                        views.getOrDefault(event.getId(), 0L)))
+                        views.getOrDefault(event.getId(), 0L),
+                        comments.getOrDefault(event.getId(), 0L)))
                 .sorted(Comparator.comparing(EventShortDto::getId))
                 .collect(Collectors.toList());
     }
@@ -286,6 +289,11 @@ public class EventServiceImpl implements EventService {
         log.info("Вывод события с ID {}", eventId);
         return eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Событие с таким ID не существует."));
+    }
+
+    private Event findEventById(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new NotFoundException("Событие с ID " + eventId + " не найдено"));
     }
 
     private Location getOrSaveLocation(LocationDto locationDto) {
@@ -317,5 +325,21 @@ public class EventServiceImpl implements EventService {
             throw new ForbiddenException(String.format("Поле: stateAction. Error: Новый лимит участников должен быть " +
                     "не меньше количества уже одобренных заявок: %s", eventParticipantLimit));
         }
+    }
+
+    private Map<Long, Long> getCommentsCount(Set<Event> events) {
+        List<Long> eventsId = events.stream()
+                .map(Event::getId)
+                .collect(Collectors.toList());
+        Map<Long, Long> comments = new HashMap<>();
+        if (!eventsId.isEmpty()) {
+            List<Object[]> commentsData = commentRepository.findCommentsCountByEventIds(eventsId);
+            for (Object[] row : commentsData) {
+                Long eventId = (Long) row[0];
+                Long count = ((Number) row[1]).longValue();
+                comments.put(eventId, count);
+            }
+        }
+        return comments;
     }
 }
