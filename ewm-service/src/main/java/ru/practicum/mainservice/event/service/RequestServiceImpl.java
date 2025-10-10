@@ -20,11 +20,7 @@ import ru.practicum.mainservice.user.model.User;
 import ru.practicum.mainservice.user.service.UserService;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,7 +49,7 @@ public class RequestServiceImpl implements RequestService {
         log.info("Создание запроса на участие в мероприятии с ID {} пользователем с ID {}", eventId, userId);
 
         User user = userService.getUserById(userId);
-        Event event = eventService.getEventById(eventId);
+        Event event = eventService.getPublicEventById(eventId);
 
         if (Objects.equals(event.getInitiator().getId(), userId)) {
             throw new ForbiddenException("Вы не можете создать запрос на собственное мероприятие");
@@ -97,7 +93,7 @@ public class RequestServiceImpl implements RequestService {
         userService.getUserById(userId);
 
         Request request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new NotFoundException("Заявка на участие с ID " + requestId + " не найдена."));
+                .orElseThrow(() -> new NotFoundException("Заявка на участие с таким ID не подается."));
 
         checkUserIsOwner(request.getRequester().getId(), userId);
 
@@ -112,7 +108,7 @@ public class RequestServiceImpl implements RequestService {
                 "владельца с ID {}", eventId, userId);
 
         userService.getUserById(userId);
-        Event event = eventService.getEventById(eventId);
+        Event event = eventService.getPublicEventById(eventId);
 
         checkUserIsOwner(event.getInitiator().getId(), userId);
 
@@ -127,7 +123,7 @@ public class RequestServiceImpl implements RequestService {
                 eventId, userId, eventRequestStatusUpdateRequest);
 
         userService.getUserById(userId);
-        Event event = eventService.getEventById(eventId);
+        Event event = eventService.getPublicEventById(eventId);
 
         checkUserIsOwner(event.getInitiator().getId(), userId);
 

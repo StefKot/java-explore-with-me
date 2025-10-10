@@ -56,7 +56,7 @@ public class StatsServiceImpl implements StatsService {
                 "для списка событий. ");
         Map<Long, Long> views = new HashMap<>();
         Set<Event> publishedEvents = getPublished(events);
-        if (events.isEmpty()) {
+        if (publishedEvents.isEmpty()) {
             return views;
         }
         Optional<LocalDateTime> minPublishedOn = publishedEvents.stream()
@@ -71,7 +71,7 @@ public class StatsServiceImpl implements StatsService {
                     .map(id -> ("/events/" + id))
                     .collect(Collectors.toList());
 
-            List<ViewStats> stats = getStats(start, end, uris, true); // <--- ВОТ ИСПРАВЛЕНИЕ
+            List<ViewStats> stats = getStats(start, end, uris, true);
 
             stats.forEach(stat -> {
                 Long eventId = Long.parseLong(stat.getUri()

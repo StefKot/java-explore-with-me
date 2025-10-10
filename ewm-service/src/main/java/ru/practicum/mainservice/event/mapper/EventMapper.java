@@ -29,5 +29,6 @@ public interface EventMapper {
     EventFullDto toEventFullDto(Event event, Long confirmedRequests, Long views);
 
     @Mapping(target = "views", source = "views")
-    EventShortDto toEventShortDto(Event event, Long confirmedRequests, Long views);
+    @Mapping(target = "comments", source = "comments")
+    EventShortDto toEventShortDto(Event event, Long confirmedRequests, Long views, Long comments);
 }
